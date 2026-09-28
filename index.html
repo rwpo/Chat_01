@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prática de Diálogos em Português (L2)</title>
+    <!-- Tailwind CSS para design responsivo e acessível -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Lexend', sans-serif;
+            background-color: #F8FAFC;
+            color: #0F172A;
+        }
+
+        /* Estilos para áreas de drop e itens arrastáveis */
+        .drop-zone {
+            min-width: 110px;
+            min-height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px dashed #94A3B8;
+            border-radius: 0.75rem;
+            background-color: #FFFFFF;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+            margin: 0 4px;
+            padding: 4px 8px;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #2563EB;
+            background-color: #EFF6FF;
+            transform: scale(1.05);
+        }
+
+        .drop-zone.filled {
+            border-style: solid;
+            border-color: #CBD5E1;
+            background-color: #F1F5F9;
+        }
+
+        .drop-zone.correct {
+            border-color: #16A34A !important;
+            background-color: #DCFCE7 !important;
+        }
+
+        .drop-zone.incorrect {
+            border-color: #DC2626 !important;
+            background-color: #FEE2E2 !important;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .draggable-item {
+            user-select: none;
+            touch-action: none;
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .draggable-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+
+        .draggable-item.dragging {
+            opacity: 0.5;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        /* Classes de alto contraste e acessibilidade */
+        .badge-pronome {
+            background-color: #E0F2FE;
+            color: #0369A1;
+            border: 2px solid #0284C7;
+        }
+
+        .badge-verbo {
+            background-color: #FEF3C7;
+            color: #B45309;
+            border: 2px solid #D97706;
+        }
+
+        /* Indicadores acessíveis para foco */
+        button:focus-visible, .draggable-item:focus-visible {
+            outline: 4px solid #2563EB;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 md:p-8 max-w-5xl mx-auto">
+
+    <header class="w-full bg-white rounded-2xl p-6 shadow-sm border-2 border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-4">
+            <div class="bg-blue-600 text-white p-3 rounded-xl shadow">
+                <i data-lucide="message-square-code" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Diálogos em Português</h1>
+                <p class="text-slate-600 font-medium">Complete os diálogos arrastando os verbos e pronomes!</p>
+            </div>
+        </div>
+        
+        <!-- Controles de Acessibilidade / Legenda -->
+        <div class="flex flex-wrap items-center gap-3 bg-slate-100 p-3 rounded-xl text-sm font-semibold border border-slate-200">
+            <span class="text-slate-700">Legenda:</span>
+            <span class="px-3 py-1 rounded-lg badge-pronome text-xs md:text-sm">🔹 Pronome</span>
+            <span class="px-3 py-1 rounded-lg badge-verbo text-xs md:text-sm">🔸 Verbo</span>
+        </div>
+    </header>
+
+    <nav class="w-full mb-6">
+        <div class="flex items-center gap-2 overflow-x-auto pb-2" id="scenario-buttons">
+            <!-- Botões das situações gerados via JS -->
+        </div>
+    </nav>
+
+    <main class="w-full grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
+        
+        <!-- Cartão do Diálogo (Esquerda / Centro) -->
+        <section class="lg:col-span-2 bg-white rounded-2xl p-6 md:p-8 shadow-sm border-2 border-slate-200 flex flex-col justify-between">
+            <div>
+                <!-- Cabeçalho do Cenário Ativo -->
+                <div class="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-6">
+                    <div class="flex items-center gap-3">
+                        <span id="scenario-emoji" class="text-4xl" role="img" aria-label="Ícone do Cenário">👋</span>
+                        <div>
+                            <h2 id="scenario-title" class="text-xl font-bold text-slate-800">Carregando...</h2>
+                            <p id="scenario-desc" class="text-sm text-slate-500">Aguarde um momento</p>
+                        </div>
+                    </div>
+                    <button id="reset-btn" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl transition border border-slate-300">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                        <span>Reiniciar</span>
+                    </button>
+                </div>
+
+                <!-- Lista de Balões de Diálogo -->
+                <div id="dialogue-container" class="space-y-6">
+                    <!-- Gerado dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Feedback de Validação -->
+            <div id="feedback-box" class="hidden mt-6 p-4 rounded-xl font-bold flex items-center justify-between transition-all">
+                <div class="flex items-center gap-3">
+                    <i id="feedback-icon" class="w-7 h-7"></i>
+                    <span id="feedback-text" class="text-lg"></span>
+                </div>
+                <button id="next-btn" class="hidden flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl shadow transition">
+                    <span>Próximo Cenário</span>
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Banco de Palavras (Direita) -->
+        <section class="bg-white rounded-2xl p-6 shadow-sm border-2 border-slate-200 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-4">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="layers" class="w-5 h-5 text-blue-600"></i>
+                        Banco de Palavras
+                    </h3>
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Arraste ou Toque</span>
+                </div>
+                
+                <p class="text-xs text-slate-500 mb-4">Arraste a palavra correta para o espaço correspondente no diálogo.</p>
+
+                <!-- Palavras Disponíveis -->
+                <div id="words-bank" class="flex flex-wrap gap-3 min-h-[160px] p-4 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                    <!-- Palavras injetadas via JS -->
+                </div>
+            </div>
+
+            <!-- Botão de Verificação -->
+            <div class="mt-6 pt-4 border-t-2 border-slate-100">
+                <button id="check-btn" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-lg font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                    <span>Verificar Respostas</span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Dados das atividades com apoio visual contextual
+        const scenarios = [
+            {
+                id: 'apresentacao',
+                title: 'Conhecendo Alguém',
+                desc: 'Cumprimentos e apresentação pessoal simples',
+                emoji: '🤝',
+                words: [
+                    { id: 'w1', text: 'Eu', type: 'pronome' },
+                    { id: 'w2', text: 'sou', type: 'verbo' },
+                    { id: 'w3', text: 'Você', type: 'pronome' },
+                    { id: 'w4', text: 'mora', type: 'verbo' }
+                ],
+                dialogue: [
+                    {
+                        speaker: 'Pessoa A',
+                        avatar: '🙋‍♂️',
+                        textParts: [
+                            { text: 'Olá! ' },
+                            { slotId: 'slot1', correctId: 'w1' },
+                            { text: ' me chamo Lucas. E você?' }
+                        ]
+                    },
+                    {
+                        speaker: 'Pessoa B',
+                        avatar: '🙋‍♀️',
+                        textParts: [
+                            { text: 'Prazer! Eu ' },
+                            { slotId: 'slot2', correctId: 'w2' },
+                            { text: ' a Maria. Onde ' },
+                            { slotId: 'slot3', correctId: 'w3' },
+                            { text: ' ' },
+                            { slotId: 'slot4', correctId: 'w4' },
+                            { text: '?' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'padaria',
+                title: 'Na Padaria / Café',
+                desc: 'Pedindo comida e bebida no cotidiano',
+                emoji: '🥖',
+                words: [
+                    { id: 'w5', text: 'Você', type: 'pronome' },
+                    { id: 'w6', text: 'quer', type: 'verbo' },
+                    { id: 'w7', text: 'Eu', type: 'pronome' },
+                    { id: 'w8', text: 'quero', type: 'verbo' }
+                ],
+                dialogue: [
+                    {
+                        speaker: 'Atendente',
+                        avatar: '🧑‍🍳',
+                        textParts: [
+                            { text: 'Bom dia! O que ' },
+                            { slotId: 'slot1', correctId: 'w5' },
+                            { text: ' ' },
+                            { slotId: 'slot2', correctId: 'w6' },
+                            { text: ' hoje?' }
+                        ]
+                    },
+                    {
+                        speaker: 'Cliente',
+                        avatar: '☕',
+                        textParts: [
+                            { text: 'Bom dia! ' },
+                            { slotId: 'slot3', correctId: 'w7' },
+                            { text: ' ' },
+                            { slotId: 'slot4', correctId: 'w8' },
+                            { text: ' pão e um café, por favor.' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'informacao',
+                title: 'Pedindo Informação',
+                desc: 'Encontrando locais na cidade',
+                emoji: '🗺️',
+                words: [
+                    { id: 'w9', text: 'Você', type: 'pronome' },
+                    { id: 'w10', text: 'sabe', type: 'verbo' },
+                    { id: 'w11', text: 'fica', type: 'verbo' },
+                    { id: 'w12', text: 'Ele', type: 'pronome' }
+                ],
+                dialogue: [
+                    {
+                        speaker: 'Pedestre',
+                        avatar: '🚶',
+                        textParts: [
+                            { text: 'Com licença, ' },
+                            { slotId: 'slot1', correctId: 'w9' },
+                            { text: ' ' },
+                            { slotId: 'slot2', correctId: 'w10' },
+                            { text: ' onde é o ônibus?' }
+                        ]
+                    },
+                    {
+                        speaker: 'Informante',
+                        avatar: '📍',
+                        textParts: [
+                            { text: 'Sim! ' },
+                            { slotId: 'slot3', correctId: 'w12' },
+                            { text: ' ' },
+                            { slotId: 'slot4', correctId: 'w11' },
+                            { text: ' perto da farmácia ali na frente.' }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        let currentScenarioIndex = 0;
+        let selectedWordElement = null; // Para suporte a toque simples/clique
+        let userAnswers = {}; // Mapeamento { slotId: wordId }
+
+        // Elementos DOM
+        const scenarioButtonsContainer = document.getElementById('scenario-buttons');
+        const scenarioEmoji = document.getElementById('scenario-emoji');
+        const scenarioTitle = document.getElementById('scenario-title');
+        const scenarioDesc = document.getElementById('scenario-desc');
+        const dialogueContainer = document.getElementById('dialogue-container');
+        const wordsBank = document.getElementById('words-bank');
+        const feedbackBox = document.getElementById('feedback-box');
+        const feedbackText = document.getElementById('feedback-text');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const checkBtn = document.getElementById('check-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        function initApp() {
+            renderNavButtons();
+            loadScenario(0);
+            
+            checkBtn.addEventListener('click', validateAnswers);
+            resetBtn.addEventListener('click', () => loadScenario(currentScenarioIndex));
+            nextBtn.addEventListener('click', () => {
+                if (currentScenarioIndex < scenarios.length - 1) {
+                    loadScenario(currentScenarioIndex + 1);
+                } else {
+                    loadScenario(0); // Volta para o primeiro
+                }
+            });
+        }
+
+        function renderNavButtons() {
+            scenarioButtonsContainer.innerHTML = '';
+            scenarios.forEach((scen, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition border-2 text-sm md:text-base whitespace-nowrap ${
+                    idx === currentScenarioIndex 
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`;
+                btn.innerHTML = `<span>${scen.emoji}</span> <span>${scen.title}</span>`;
+                btn.addEventListener('click', () => loadScenario(idx));
+                scenarioButtonsContainer.appendChild(btn);
+            });
+        }
+
+        function loadScenario(index) {
+            currentScenarioIndex = index;
+            userAnswers = {};
+            selectedWordElement = null;
+
+            const scenario = scenarios[index];
+
+            // Atualiza cabeçalho
+            scenarioEmoji.textContent = scenario.emoji;
+            scenarioTitle.textContent = scenario.title;
+            scenarioDesc.textContent = scenario.desc;
+
+            // Esconde mensagens de feedback
+            feedbackBox.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+
+            renderNavButtons();
+            renderDialogue(scenario);
+            renderWordBank(scenario);
+            
+            lucide.createIcons();
+        }
+
+        function renderDialogue(scenario) {
+            dialogueContainer.innerHTML = '';
+
+            scenario.dialogue.forEach(line => {
+                const bubbleCard = document.createElement('div');
+                bubbleCard.className = "flex items-start gap-3 p-4 md:p-5 rounded-2xl bg-slate-50 border-2 border-slate-200";
+
+                const avatar = document.createElement('div');
+                avatar.className = "text-3xl md:text-4xl p-2 bg-white rounded-xl shadow-sm border border-slate-100 flex-shrink-0";
+                avatar.textContent = line.avatar;
+
+                const content = document.createElement('div');
+                content.className = "flex-grow text-slate-800 text-base md:text-lg font-medium leading-relaxed";
+
+                const speakerName = document.createElement('span');
+                speakerName.className = "block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1";
+                speakerName.textContent = line.speaker;
+
+                const sentence = document.createElement('p');
+                sentence.className = "flex flex-wrap items-center gap-y-2";
+
+                line.textParts.forEach(part => {
+                    if (part.text) {
+                        const span = document.createElement('span');
+                        span.textContent = part.text;
+                        sentence.appendChild(span);
+                    } else if (part.slotId) {
+                        const dropZone = document.createElement('div');
+                        dropZone.className = 'drop-zone';
+                        dropZone.dataset.slotId = part.slotId;
+                        dropZone.dataset.correctId = part.correctId;
+                        
+                        // Configura eventos de Drag & Drop e Clique/Toque
+                        setupDropZoneEvents(dropZone);
+
+                        sentence.appendChild(dropZone);
+                    }
+                });
+
+                content.appendChild(speakerName);
+                content.appendChild(sentence);
+                bubbleCard.appendChild(avatar);
+                bubbleCard.appendChild(content);
+                dialogueContainer.appendChild(bubbleCard);
+            });
+        }
+
+        function renderWordBank(scenario) {
+            wordsBank.innerHTML = '';
+            
+            // Embaralhar palavras para o desafio
+            const shuffledWords = [...scenario.words].sort(() => Math.random() - 0.5);
+
+            shuffledWords.forEach(word => {
+                const wordEl = createWordCard(word);
+                wordsBank.appendChild(wordEl);
+            });
+        }
+
+        function createWordCard(word) {
+            const card = document.createElement('div');
+            const badgeClass = word.type === 'pronome' ? 'badge-pronome' : 'badge-verbo';
+            
+            card.className = `draggable-item px-4 py-2.5 rounded-xl font-bold text-base md:text-lg shadow-sm border-2 ${badgeClass} flex items-center justify-center cursor-pointer select-none`;
+            card.textContent = word.text;
+            card.draggable = true;
+            card.dataset.wordId = word.id;
+            card.dataset.wordType = word.type;
+            card.dataset.wordText = word.text;
+
+            setupDraggableEvents(card);
+
+            return card;
+        }
+
+        function setupDraggableEvents(el) {
+            // Drag and Drop padrão (Mouse/Desktop)
+            el.addEventListener('dragstart', (e) => {
+                el.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', el.dataset.wordId);
+            });
+
+            el.addEventListener('dragend', () => {
+                el.classList.remove('dragging');
+            });
+
+            // Suporte para Acessibilidade por Clique/Toque no Celular
+            el.addEventListener('click', () => {
+                if (selectedWordElement === el) {
+                    // Desseleciona
+                    selectedWordElement.classList.remove('ring-4', 'ring-blue-500');
+                    selectedWordElement = null;
+                } else {
+                    if (selectedWordElement) {
+                        selectedWordElement.classList.remove('ring-4', 'ring-blue-500');
+                    }
+                    selectedWordElement = el;
+                    selectedWordElement.classList.add('ring-4', 'ring-blue-500');
+                }
+            });
+        }
+
+        function setupDropZoneEvents(zone) {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                const wordId = e.dataTransfer.getData('text/plain');
+                const wordEl = document.querySelector(`[data-word-id="${wordId}"]`);
+                if (wordEl) {
+                    placeWordInSlot(wordEl, zone);
+                }
+            });
+
+            // Clique na zona para encaixar a palavra selecionada por toque
+            zone.addEventListener('click', () => {
+                if (selectedWordElement) {
+                    placeWordInSlot(selectedWordElement, zone);
+                    selectedWordElement.classList.remove('ring-4', 'ring-blue-500');
+                    selectedWordElement = null;
+                } else if (zone.firstChild) {
+                    // Se clicar numa zona já preenchida, remove a palavra de volta para o banco
+                    returnWordToBank(zone);
+                }
+            });
+        }
+
+        function placeWordInSlot(wordEl, zone) {
+            // Se o slot já possui uma palavra, devolve ela ao banco
+            if (zone.firstChild) {
+                returnWordToBank(zone);
+            }
+
+            // Move a palavra para dentro da zona de soltura
+            zone.appendChild(wordEl);
+            zone.classList.add('filled');
+            userAnswers[zone.dataset.slotId] = wordEl.dataset.wordId;
+
+            // Remove o estilo de seleção se houver
+            wordEl.classList.remove('ring-4', 'ring-blue-500');
+        }
+
+        function returnWordToBank(zone) {
+            const wordEl = zone.firstChild;
+            if (wordEl) {
+                wordsBank.appendChild(wordEl);
+                zone.classList.remove('filled', 'correct', 'incorrect');
+                delete userAnswers[zone.dataset.slotId];
+            }
+        }
+
+        function validateAnswers() {
+            const currentScenario = scenarios[currentScenarioIndex];
+            const zones = dialogueContainer.querySelectorAll('.drop-zone');
+            
+            let allFilled = true;
+            let correctCount = 0;
+            const totalSlots = zones.length;
+
+            zones.forEach(zone => {
+                const slotId = zone.dataset.slotId;
+                const correctId = zone.dataset.correctId;
+                const userWordId = userAnswers[slotId];
+
+                zone.classList.remove('correct', 'incorrect');
+
+                if (!userWordId) {
+                    allFilled = false;
+                } else if (userWordId === correctId) {
+                    zone.classList.add('correct');
+                    correctCount++;
+                } else {
+                    zone.classList.add('incorrect');
+                }
+            });
+
+            // Apresentação do Feedback Visual Claro
+            feedbackBox.classList.remove('hidden', 'bg-emerald-100', 'bg-amber-100', 'bg-rose-100', 'text-emerald-800', 'text-amber-800', 'text-rose-800');
+
+            if (!allFilled) {
+                feedbackBox.classList.add('bg-amber-100', 'text-amber-800');
+                feedbackIcon.setAttribute('data-lucide', 'alert-circle');
+                feedbackText.textContent = 'Atenção! Preencha todos os espaços em branco com as palavras.';
+                nextBtn.classList.add('hidden');
+            } else if (correctCount === totalSlots) {
+                feedbackBox.classList.add('bg-emerald-100', 'text-emerald-800');
+                feedbackIcon.setAttribute('data-lucide', 'party-popper');
+                feedbackText.textContent = 'Excelente! Você completou o diálogo corretamente! 🎉';
+                nextBtn.classList.remove('hidden');
+            } else {
+                feedbackBox.classList.add('bg-rose-100', 'text-rose-800');
+                feedbackIcon.setAttribute('data-lucide', 'x-circle');
+                feedbackText.textContent = 'Algumas palavras estão fora do lugar. Tente novamente!';
+                nextBtn.classList.add('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        // Inicializar aplicação ao carregar a página
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
