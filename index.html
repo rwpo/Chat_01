@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prática de Diálogos em Português L2 para Surdos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Lexend', sans-serif;
+            background-color: #F1F5F9;
+            color: #0F172A;
+        }
+
+        .drop-zone {
+            min-width: 100px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px dashed #94A3B8;
+            border-radius: 0.75rem;
+            background-color: #FFFFFF;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+            margin: 2px 4px;
+            padding: 2px 8px;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #2563EB;
+            background-color: #EFF6FF;
+            transform: scale(1.05);
+        }
+
+        .drop-zone.filled {
+            border-style: solid;
+            border-color: #94A3B8;
+            background-color: #F8FAFC;
+        }
+
+        .drop-zone.correct {
+            border-color: #16A34A !important;
+            background-color: #DCFCE7 !important;
+        }
+
+        .drop-zone.incorrect {
+            border-color: #DC2626 !important;
+            background-color: #FEE2E2 !important;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .draggable-item {
+            user-select: none;
+            touch-action: none;
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .draggable-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+
+        .badge-pronome {
+            background-color: #E0F2FE;
+            color: #0369A1;
+            border: 2px solid #0284C7;
+        }
+
+        .badge-verbo {
+            background-color: #FEF3C7;
+            color: #B45309;
+            border: 2px solid #D97706;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-3 md:p-6 max-w-6xl mx-auto">
+
+    <header class="w-full bg-white rounded-2xl p-4 md:p-6 shadow-sm border-2 border-slate-200 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-4">
+            <div class="bg-blue-600 text-white p-3 rounded-xl shadow">
+                <i data-lucide="message-square-text" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold text-slate-900">Português para Surdos (L2)</h1>
+                <p class="text-xs md:text-sm text-slate-600 font-medium">50 Diálogos do Cotidiano • Arraste ou Toque nos Verbos e Pronomes</p>
+            </div>
+        </div>
+        
+        <!-- Legenda de Cores Gramaticais -->
+        <div class="flex items-center gap-3 bg-slate-100 p-2.5 rounded-xl text-xs font-semibold border border-slate-200">
+            <span class="text-slate-700">Gramática:</span>
+            <span class="px-2.5 py-1 rounded-lg badge-pronome">🔹 Pronome</span>
+            <span class="px-2.5 py-1 rounded-lg badge-verbo">🔸 Verbo</span>
+        </div>
+    </header>
+
+    <nav class="w-full mb-4">
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none" id="category-tabs">
+            <!-- Categorias geradas via JavaScript -->
+        </div>
+    </nav>
+
+    <main class="w-full grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
+        
+        <!-- Área do Diálogo (2 colunas no desktop) -->
+        <section class="lg:col-span-2 bg-white rounded-2xl p-5 md:p-7 shadow-sm border-2 border-slate-200 flex flex-col justify-between">
+            <div>
+                <!-- Topo do Diálogo com Seletor e Navegação -->
+                <div class="flex flex-wrap items-center justify-between border-b-2 border-slate-100 pb-4 mb-5 gap-3">
+                    <div class="flex items-center gap-3">
+                        <span id="cat-emoji" class="text-3xl md:text-4xl">👋</span>
+                        <div>
+                            <h2 id="cat-title" class="text-lg md:text-xl font-bold text-slate-800">Carregando...</h2>
+                            <p id="dialogue-counter" class="text-xs md:text-sm font-semibold text-blue-600">Diálogo 1 de 8</p>
+                        </div>
+                    </div>
+
+                    <!-- Seletor Rápido de Diálogos -->
+                    <div class="flex items-center gap-2">
+                        <select id="dialogue-select" class="bg-slate-100 border-2 border-slate-200 text-slate-800 text-xs md:text-sm font-semibold rounded-xl px-3 py-2 outline-none focus:border-blue-500">
+                            <!-- Opções dos 50 diálogos injetadas dinamicamente -->
+                        </select>
+                        <button id="prev-btn" title="Diálogo Anterior" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-300 transition">
+                            <i data-lucide="chevron-left" class="w-5 h-5 text-slate-700"></i>
+                        </button>
+                        <button id="next-dialogue-btn" title="Próximo Diálogo" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-300 transition">
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-slate-700"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Balões de Fala -->
+                <div id="dialogue-container" class="space-y-4">
+                    <!-- Gerado dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Caixa de Feedback e Dica Contextual -->
+            <div class="mt-6">
+                <div id="hint-box" class="hidden mb-3 p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-blue-900 text-sm flex items-start gap-2">
+                    <i data-lucide="lightbulb" class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"></i>
+                    <span id="hint-text">Dica aparecerá aqui...</span>
+                </div>
+
+                <div id="feedback-box" class="hidden p-4 rounded-xl font-bold flex flex-col md:flex-row items-center justify-between gap-3 transition-all">
+                    <div class="flex items-center gap-3">
+                        <i id="feedback-icon" class="w-6 h-6"></i>
+                        <span id="feedback-text" class="text-base md:text-lg"></span>
+                    </div>
+                    <button id="advance-btn" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl transition flex items-center gap-2">
+                        <span>Avançar</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Banco de Palavras e Ações -->
+        <section class="bg-white rounded-2xl p-5 md:p-6 shadow-sm border-2 border-slate-200 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between border-b-2 border-slate-100 pb-3 mb-3">
+                    <h3 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-blue-600"></i>
+                        Banco de Palavras
+                    </h3>
+                    <span class="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-wider">Arraste ou Toque</span>
+                </div>
+                
+                <p class="text-xs text-slate-500 mb-3">Selecione ou arraste a palavra gramatical para a lacuna correspondente.</p>
+
+                <!-- Palavras do Diálogo Atual -->
+                <div id="words-bank" class="flex flex-wrap gap-2.5 min-h-[140px] p-3 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                    <!-- Itens gramaticais arrastáveis -->
+                </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="mt-6 pt-4 border-t-2 border-slate-100 flex flex-col gap-2">
+                <button id="check-btn" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-xl shadow transition flex items-center justify-center gap-2 text-base">
+                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    <span>Verificar Resposta</span>
+                </button>
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="hint-btn" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs md:text-sm rounded-xl border border-slate-300 transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="help-circle" class="w-4 h-4 text-amber-600"></i>
+                        <span>Dica</span>
+                    </button>
+                    <button id="solution-btn" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs md:text-sm rounded-xl border border-slate-300 transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="eye" class="w-4 h-4 text-blue-600"></i>
+                        <span>Gabarito</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Banco de dados contendo os 50 diálogos distribuídos nas 6 categorias
+        const categories = [
+            { id: 'cat1', title: 'Conhecendo Alguém', emoji: '🤝' },
+            { id: 'cat2', title: 'Na Padaria / Café', emoji: '🥖' },
+            { id: 'cat3', title: 'Pedindo Informação', emoji: '🗺️' },
+            { id: 'cat4', title: 'Na Escola', emoji: '🏫' },
+            { id: 'cat5', title: 'Entrevista de Emprego', emoji: '💼' },
+            { id: 'cat6', title: 'Ida ao Shopping', emoji: '🛍️' }
+        ];
+
+        const dialoguesData = [
+            // CATEGORIA 1: CONHECENDO ALGUÉM (1-9)
+            {
+                id: 1, catId: 'cat1', title: 'Apresentação Pessoal', hint: 'Use "Eu" para falar de você e "sou" para estado permanente/nome.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'sou', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Lucas', avatar: '🙋‍♂️', parts: [{ text: 'Olá! ' }, { slotId: 's1', correctId: 'w1' }, { text: ' me chamo Lucas.' }] },
+                    { speaker: 'Maria', avatar: '🙋‍♀️', parts: [{ text: 'Prazer! Eu ' }, { slotId: 's2', correctId: 'w2' }, { text: ' a Maria.' }] }
+                ]
+            },
+            {
+                id: 2, catId: 'cat1', title: 'Lugar onde mora', hint: 'Pergunta sobre moradia: "Onde você mora?".',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'mora', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Pedro', avatar: '🧑', parts: [{ text: 'Onde ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: '?' }] },
+                    { speaker: 'Ana', avatar: '👩', parts: [{ text: 'Eu moro em São Paulo.' }] }
+                ]
+            },
+            {
+                id: 3, catId: 'cat1', title: 'Idade e Aniversário', hint: 'Relacionado à idade e ao verbo "ter".',
+                words: [{ id: 'w1', text: 'Quantos', type: 'pronome' }, { id: 'w2', text: 'tem', type: 'verbo' }],
+                lines: [
+                    { speaker: 'João', avatar: '👦', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' anos você ' }, { slotId: 's2', correctId: 'w2' }, { text: '?' }] },
+                    { speaker: 'Carla', avatar: '👧', parts: [{ text: 'Eu tenho 20 anos.' }] }
+                ]
+            },
+            {
+                id: 4, catId: 'cat1', title: 'Conhecendo Aluno Surdo', hint: 'Identificação como comunidade surda usando Língua de Sinais.',
+                words: [{ id: 'w1', text: 'Nós', type: 'pronome' }, { id: 'w2', text: 'usamos', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Felipe', avatar: '🙋‍♂️', parts: [{ text: 'Você sinaliza Libras?' }] },
+                    { speaker: 'Beatriz', avatar: '🙋‍♀️', parts: [{ text: 'Sim! ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' Libras para conversar.' }] }
+                ]
+            },
+            {
+                id: 5, catId: 'cat1', title: 'Gostos Pessoais', hint: 'Perguntar sobre atividades de lazer.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'gosta', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Sérgio', avatar: '👨', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' de praticar esportes?' }] },
+                    { speaker: 'Marta', avatar: '👩', parts: [{ text: 'Eu amo jogar futebol!' }] }
+                ]
+            },
+            {
+                id: 6, catId: 'cat1', title: 'Apresentando um Amigo', hint: 'Usar "Ele" para referir-se a uma terceira pessoa masculina.',
+                words: [{ id: 'w1', text: 'Ele', type: 'pronome' }, { id: 'w2', text: 'é', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Gabi', avatar: '👧', parts: [{ text: 'Quem é aquele rapaz?' }] },
+                    { speaker: 'Rafael', avatar: '👦', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' meu amigo de infância.' }] }
+                ]
+            },
+            {
+                id: 7, catId: 'cat1', title: 'Profissão', hint: 'Expressar ocupação profissional.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'trabalho', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Bruno', avatar: '👨‍💼', parts: [{ text: 'Qual é o seu trabalho?' }] },
+                    { speaker: 'Camila', avatar: '👩‍💻', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' como designer gráfico.' }] }
+                ]
+            },
+            {
+                id: 8, catId: 'cat1', title: 'Saudação no Encontro', hint: 'Verbo de cumprimento casual.',
+                words: [{ id: 'w1', text: 'Como', type: 'pronome' }, { id: 'w2', text: 'vai', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Marcos', avatar: '🙋‍♂️', parts: [{ text: 'Olá! ' }, { slotId: 's1', correctId: 'w1' }, { text: ' você ' }, { slotId: 's2', correctId: 'w2' }, { text: '?' }] },
+                    { speaker: 'Paula', avatar: '🙋‍♀️', parts: [{ text: 'Tudo bem por aqui, obrigado!' }] }
+                ]
+            },
+            {
+                id: 9, catId: 'cat1', title: 'Agradecimento', hint: 'Forma cortês de encerrar conversa.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'agradeço', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Tiago', avatar: '👨', parts: [{ text: 'Foi um prazer te conhecer!' }] },
+                    { speaker: 'Fernanda', avatar: '👩', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' também pela atenção.' }] }
+                ]
+            },
+
+            // CATEGORIA 2: NA PADARIA / CAFÉ (10-18)
+            {
+                id: 10, catId: 'cat2', title: 'Pedindo Pão', hint: 'Saber o verbo de desejo ("quero") e pronome de tratamento.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'deseja', type: 'verbo' }, { id: 'w3', text: 'Eu', type: 'pronome' }, { id: 'w4', text: 'quero', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Atendente', avatar: '🧑‍🍳', parts: [{ text: 'O que ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: '?' }] },
+                    { speaker: 'Cliente', avatar: '☕', parts: [{ text: ' ' }, { slotId: 's3', correctId: 'w3' }, { text: ' ' }, { slotId: 's4', correctId: 'w4' }, { text: ' seis pães franceses.' }] }
+                ]
+            },
+            {
+                id: 11, catId: 'cat2', title: 'Café com Leite', hint: 'Escolha de bebida quente no café.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'prefiro', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Garçom', avatar: '🤵', parts: [{ text: 'Café puro ou com leite?' }] },
+                    { speaker: 'Cliente', avatar: '👨', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' café com leite sem açúcar.' }] }
+                ]
+            },
+            {
+                id: 12, catId: 'cat2', title: 'Saber o Preço', hint: 'Verbo custar para averiguar valores.',
+                words: [{ id: 'w1', text: 'Quanto', type: 'pronome' }, { id: 'w2', text: 'custa', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '👩', parts: [{ text: 'Por favor, ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' este pedaço de bolo?' }] },
+                    { speaker: 'Atendente', avatar: '🧑‍🍳', parts: [{ text: 'Custa 8 reais.' }] }
+                ]
+            },
+            {
+                id: 13, catId: 'cat2', title: 'Aonde Sentar', hint: 'Procurar mesa disponível na padaria.',
+                words: [{ id: 'w1', text: 'Nós', type: 'pronome' }, { id: 'w2', text: 'podemos', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Amigo 1', avatar: '👦', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' sentar naquela mesa perto da janela?' }] },
+                    { speaker: 'Amigo 2', avatar: '👧', parts: [{ text: 'Sim, está vaga!' }] }
+                ]
+            },
+            {
+                id: 14, catId: 'cat2', title: 'Forma de Pagamento', hint: 'Pagando a conta no caixa.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'aceita', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '💳', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' cartão de crédito ou Pix?' }] },
+                    { speaker: 'Caixa', avatar: '👨‍💼', parts: [{ text: 'Aceitamos ambas as formas de pagamento.' }] }
+                ]
+            },
+            {
+                id: 15, catId: 'cat2', title: 'Suco Natural', hint: 'Perguntar os sabores disponíveis.',
+                words: [{ id: 'w1', text: 'Vocês', type: 'pronome' }, { id: 'w2', text: 'têm', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '🍹', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' suco natural de laranja?' }] },
+                    { speaker: 'Atendente', avatar: '🧑‍🍳', parts: [{ text: 'Temos sim, feito na hora!' }] }
+                ]
+            },
+            {
+                id: 16, catId: 'cat2', title: 'Pedindo a Conta', hint: 'Fechar o pedido.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'vou', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '👨', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' pagar agora. Traga a conta, por favor.' }] },
+                    { speaker: 'Garçom', avatar: '🤵', parts: [{ text: 'Trago imediatamente!' }] }
+                ]
+            },
+            {
+                id: 17, catId: 'cat2', title: 'Salgado Quentinho', hint: 'Pedir aquecimento do produto.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'pode', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '🥐', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' esquentar este croissant?' }] },
+                    { speaker: 'Atendente', avatar: '🧑‍🍳', parts: [{ text: 'Claro, um minutinho no forno!' }] }
+                ]
+            },
+            {
+                id: 18, catId: 'cat2', title: 'Para Viagem', hint: 'Consumo fora do estabelecimento.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'levo', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Atendente', avatar: '🛍️', parts: [{ text: 'É para comer aqui?' }] },
+                    { speaker: 'Cliente', avatar: '👩', parts: [{ text: 'Não, ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' para viagem.' }] }
+                ]
+            },
+
+            // CATEGORIA 3: PEDINDO INFORMAÇÃO (19-27)
+            {
+                id: 19, catId: 'cat3', title: 'Ponto de Ônibus', hint: 'Achar parada de transporte público.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'sabe', type: 'verbo' }, { id: 'w3', text: 'fica', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Pedestre', avatar: '🚶', parts: [{ text: 'Com licença, ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' onde ' }, { slotId: 's3', correctId: 'w3' }, { text: ' o ponto de ônibus?' }] },
+                    { speaker: 'Local', avatar: '📍', parts: [{ text: 'Fica na próxima esquina à direita.' }] }
+                ]
+            },
+            {
+                id: 20, catId: 'cat3', title: 'Localizando a Farmácia', hint: 'Procurar estabelecimento comercial de saúde.',
+                words: [{ id: 'w1', text: 'Ela', type: 'pronome' }, { id: 'w2', text: 'está', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Turista', avatar: '👨‍🦯', parts: [{ text: 'A farmácia é longe daqui?' }] },
+                    { speaker: 'Morador', avatar: '🧍', parts: [{ text: 'Não, ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' muito perto, em frente ao banco.' }] }
+                ]
+            },
+            {
+                id: 21, catId: 'cat3', title: 'Horário do Trem', hint: 'Perguntar sobre horários de partida.',
+                words: [{ id: 'w1', text: 'Qual', type: 'pronome' }, { id: 'w2', text: 'sai', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Passageiro', avatar: '🚆', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' horário o trem ' }, { slotId: 's2', correctId: 'w2' }, { text: '?' }] },
+                    { speaker: 'Agente', avatar: '👮‍♂️', parts: [{ text: 'O próximo trem sai às 14 horas.' }] }
+                ]
+            },
+            {
+                id: 22, catId: 'cat3', title: 'Perdido no Bairro', hint: 'Solicitar orientação de localização.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'estou', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Jovem', avatar: '📱', parts: [{ text: 'Socorro! ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' perdido. Onde fica a rua das Flores?' }] },
+                    { speaker: 'Informante', avatar: '👨', parts: [{ text: 'Siga direto por duas quadras.' }] }
+                ]
+            },
+            {
+                id: 23, catId: 'cat3', title: 'Caixa Eletrônico', hint: 'Procurar banco para saque.',
+                words: [{ id: 'w1', text: 'Onde', type: 'pronome' }, { id: 'w2', text: 'posso', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '🏧', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' eu ' }, { slotId: 's2', correctId: 'w2' }, { text: ' encontrar um caixa eletrônico?' }] },
+                    { speaker: 'Segurança', avatar: '👮', parts: [{ text: 'Dentro do posto de gasolina ao lado.' }] }
+                ]
+            },
+            {
+                id: 24, catId: 'cat3', title: 'Banheiro Público', hint: 'Pergunta urgente de utilidade básica.',
+                words: [{ id: 'w1', text: 'Vocês', type: 'pronome' }, { id: 'w2', text: 'têm', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Visitante', avatar: '♿', parts: [{ text: 'Com licença, ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' banheiro adaptado aqui?' }] },
+                    { speaker: 'Atendente', avatar: '👩', parts: [{ text: 'Sim, fica no final do corredor à esquerda.' }] }
+                ]
+            },
+            {
+                id: 25, catId: 'cat3', title: 'Linha de Ônibus Certa', hint: 'Orientação de transporte público.',
+                words: [{ id: 'w1', text: 'Este', type: 'pronome' }, { id: 'w2', text: 'vai', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Passageiro', avatar: '🚌', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ônibus ' }, { slotId: 's2', correctId: 'w2' }, { text: ' para o centro?' }] },
+                    { speaker: 'Motorista', avatar: '👨‍✈️', parts: [{ text: 'Sim, passa direto pelo centro!' }] }
+                ]
+            },
+            {
+                id: 26, catId: 'cat3', title: 'Sinal de Wi-Fi', hint: 'Acesso à rede de internet.',
+                words: [{ id: 'w1', text: 'Qual', type: 'pronome' }, { id: 'w2', text: 'é', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '📶', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' a senha do Wi-Fi do local?' }] },
+                    { speaker: 'Garçom', avatar: '🤵', parts: [{ text: 'A senha é a data de hoje.' }] }
+                ]
+            },
+            {
+                id: 27, catId: 'cat3', title: 'Horário de Funcionamento', hint: 'Verificar abertura de estabelecimento.',
+                words: [{ id: 'w1', text: 'Que', type: 'pronome' }, { id: 'w2', text: 'abre', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '🕒', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' horas ' }, { slotId: 's2', correctId: 'w2' }, { text: ' o museu?' }] },
+                    { speaker: 'Guia', avatar: '👨‍💼', parts: [{ text: 'Abrimos todos os dias às 9 horas.' }] }
+                ]
+            },
+
+            // CATEGORIA 4: NA ESCOLA (28-35)
+            {
+                id: 28, catId: 'cat4', title: 'Dúvida na Aula', hint: 'Pedir explicação ao professor.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'tenho', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Aluno', avatar: '🙋‍♂️', parts: [{ text: 'Professor, ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' uma dúvida sobre a tarefa.' }] },
+                    { speaker: 'Professor', avatar: '👨‍🏫', parts: [{ text: 'Pode perguntar! Estou aqui para ajudar.' }] }
+                ]
+            },
+            {
+                id: 29, catId: 'cat4', title: 'Intérprete de Libras', hint: 'Suporte de acessibilidade na sala.',
+                words: [{ id: 'w1', text: 'Ela', type: 'pronome' }, { id: 'w2', text: 'traduz', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Aluno 1', avatar: '🤟', parts: [{ text: 'O que a intérprete faz?' }] },
+                    { speaker: 'Aluno 2', avatar: '🧑', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' a fala do professor para Libras.' }] }
+                ]
+            },
+            {
+                id: 30, catId: 'cat4', title: 'Empréstimo de Caneta', hint: 'Pedir material escolar emprestado.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'empresta', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Lucas', avatar: '✏️', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' me ' }, { slotId: 's2', correctId: 'w2' }, { text: ' uma caneta azul?' }] },
+                    { speaker: 'Jéssica', avatar: '👧', parts: [{ text: 'Empresto sim, aqui está!' }] }
+                ]
+            },
+            {
+                id: 31, catId: 'cat4', title: 'Trabalho em Grupo', hint: 'Convidar colega para equipe de estudos.',
+                words: [{ id: 'w1', text: 'Nós', type: 'pronome' }, { id: 'w2', text: 'vamos', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Marcos', avatar: '📚', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' fazer o trabalho juntos?' }] },
+                    { speaker: 'Mariana', avatar: '👩', parts: [{ text: 'Ótima ideia! Vamos pesquisar na biblioteca.' }] }
+                ]
+            },
+            {
+                id: 32, catId: 'cat4', title: 'Horário do Recreio', hint: 'Saber o momento da pausa escolar.',
+                words: [{ id: 'w1', text: 'Nós', type: 'pronome' }, { id: 'w2', text: 'vamos', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Aluno', avatar: '🔔', parts: [{ text: 'Que horas ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' para o lanche?' }] },
+                    { speaker: 'Professora', avatar: '👩‍🏫', parts: [{ text: 'O sinal do recreio toca às 10 horas.' }] }
+                ]
+            },
+            {
+                id: 33, catId: 'cat4', title: 'Dia da Prova', hint: 'Confirmar data de avaliação.',
+                words: [{ id: 'w1', text: 'Quando', type: 'pronome' }, { id: 'w2', text: 'será', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Estudante', avatar: '📝', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' a prova de Português?' }] },
+                    { speaker: 'Professor', avatar: '👨‍🏫', parts: [{ text: 'A prova será na próxima quinta-feira.' }] }
+                ]
+            },
+            {
+                id: 34, catId: 'cat4', title: 'Livro de Leitura', hint: 'Retirada de livros na biblioteca.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'quero', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Aluno', avatar: '📖', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' ler este livro de histórias.' }] },
+                    { speaker: 'Bibliotecária', avatar: '👩‍💼', parts: [{ text: 'Vou registrar o empréstimo para você.' }] }
+                ]
+            },
+            {
+                id: 35, catId: 'cat4', title: 'Falta Justificada', hint: 'Avisar sobre ausência.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'falei', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Aluno', avatar: '🤒', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' com o médico e faltarei amanhã.' }] },
+                    { speaker: 'Diretora', avatar: '👩‍💼', parts: [{ text: 'Tudo bem, traga o atestado depois.' }] }
+                ]
+            },
+
+            // CATEGORIA 5: ENTREVISTA DE EMPREGO (36-43)
+            {
+                id: 36, catId: 'cat5', title: 'Experiência Anterior', hint: 'Contar histórico de trabalho.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'trabalhei', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Entrevistador', avatar: '👔', parts: [{ text: 'Qual é sua experiência profissional?' }] },
+                    { speaker: 'Candidato', avatar: '🧑‍💼', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' dois anos como auxiliar de escritório.' }] }
+                ]
+            },
+            {
+                id: 37, catId: 'cat5', title: 'Formação Acadêmica', hint: 'Falar dos estudos concluídos.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'concluí', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Entrevistadora', avatar: '👩‍💼', parts: [{ text: 'Qual o seu nível de escolaridade?' }] },
+                    { speaker: 'Candidata', avatar: '👩‍💻', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' o ensino médio técnico.' }] }
+                ]
+            },
+            {
+                id: 38, catId: 'cat5', title: 'Disponibilidade de Horário', hint: 'Concordar com o turno de trabalho.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'pode', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Recrutador', avatar: '👨‍💼', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' trabalhar no turno da tarde?' }] },
+                    { speaker: 'Candidato', avatar: '🙋‍♂️', parts: [{ text: 'Sim! Tenho total disponibilidade nesse horário.' }] }
+                ]
+            },
+            {
+                id: 39, catId: 'cat5', title: 'Pontos Fortes', hint: 'Citar qualidades profissionais.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'sou', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Entrevistador', avatar: '👔', parts: [{ text: 'Quais são suas principais qualidades?' }] },
+                    { speaker: 'Candidato', avatar: '🧑‍💼', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' pontual, organizado e dedicado.' }] }
+                ]
+            },
+            {
+                id: 40, catId: 'cat5', title: 'Comunicação e Acessibilidade', hint: 'Informar meios de contato e Libras.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'comunico', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Candidato Surdo', avatar: '🤟', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' me ' }, { slotId: 's2', correctId: 'w2' }, { text: ' por Libras e mensagens escritas.' }] },
+                    { speaker: 'Recrutadora', avatar: '👩‍💼', parts: [{ text: 'Excelente! Nossa empresa valoriza a inclusão.' }] }
+                ]
+            },
+            {
+                id: 41, catId: 'cat5', title: 'Gosto de Trabalhar em Equipe', hint: 'Harmonia com colegas no ambiente profissional.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'gosto', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Entrevistador', avatar: '👨‍💼', parts: [{ text: 'Gosta de trabalhar junto com outras pessoas?' }] },
+                    { speaker: 'Candidata', avatar: '👩', parts: [{ text: 'Sim, ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' muito de trabalhar em equipe.' }] }
+                ]
+            },
+            {
+                id: 42, catId: 'cat5', title: 'Previsão de Início', hint: 'Data para começar no emprego.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'pode', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Recrutador', avatar: '👔', parts: [{ text: 'Quando ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' começar na empresa?' }] },
+                    { speaker: 'Candidato', avatar: '🙋‍♂️', parts: [{ text: 'Posso começar já na próxima segunda-feira!' }] }
+                ]
+            },
+            {
+                id: 43, catId: 'cat5', title: 'Resultado da Seleção', hint: 'Aguardar resposta da empresa.',
+                words: [{ id: 'w1', text: 'Nós', type: 'pronome' }, { id: 'w2', text: 'vamos', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Entrevistadora', avatar: '👩‍💼', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' enviar o resultado por e-mail.' }] },
+                    { speaker: 'Candidato', avatar: '🧑‍💼', parts: [{ text: 'Muito obrigado pela oportunidade!' }] }
+                ]
+            },
+
+            // CATEGORIA 6: IDA AO SHOPPING (44-50)
+            {
+                id: 44, catId: 'cat6', title: 'Comprando Roupas', hint: 'Procurar tamanho adequado de peça.',
+                words: [{ id: 'w1', text: 'Você', type: 'pronome' }, { id: 'w2', text: 'tem', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '👕', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' esta camiseta no tamanho M?' }] },
+                    { speaker: 'Vendedor', avatar: '🧑‍💼', parts: [{ text: 'Vou verificar no estoque para você.' }] }
+                ]
+            },
+            {
+                id: 45, catId: 'cat6', title: 'Provador de Roupas', hint: 'Experimentar peças na loja.',
+                words: [{ id: 'w1', text: 'Onde', type: 'pronome' }, { id: 'w2', text: 'fica', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '🛍️', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' o provador de roupas?' }] },
+                    { speaker: 'Atendente', avatar: '👩‍💼', parts: [{ text: 'Fica logo ali no fundo da loja.' }] }
+                ]
+            },
+            {
+                id: 46, catId: 'cat6', title: 'Sessão de Cinema', hint: 'Comprar ingressos para filmes.',
+                words: [{ id: 'w1', text: 'Nós', type: 'pronome' }, { id: 'w2', text: 'queremos', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '🍿', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' dois ingressos para o filme das 18h.' }] },
+                    { speaker: 'Atendente', avatar: '🎟️', parts: [{ text: 'Qual fileira de assento vocês preferem?' }] }
+                ]
+            },
+            {
+                id: 47, catId: 'cat6', title: 'Praça de Alimentação', hint: 'Comprar refeição no shopping.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'vou', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Amigo 1', avatar: '🍔', parts: [{ text: 'O que você vai comer?' }] },
+                    { speaker: 'Amigo 2', avatar: '🍕', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' pedir um pedaço de pizza.' }] }
+                ]
+            },
+            {
+                id: 48, catId: 'cat6', title: 'Desconto e Promoção', hint: 'Solicitar preço melhor.',
+                words: [{ id: 'w1', text: 'Esta', type: 'pronome' }, { id: 'w2', text: 'tem', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '🏷️', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' calça ' }, { slotId: 's2', correctId: 'w2' }, { text: ' desconto à vista?' }] },
+                    { speaker: 'Vendedora', avatar: '👩‍💼', parts: [{ text: 'Sim, dou 10% de desconto no dinheiro ou Pix!' }] }
+                ]
+            },
+            {
+                id: 49, catId: 'cat6', title: 'Troca de Produto', hint: 'Trocar tamanho ou defeito.',
+                words: [{ id: 'w1', text: 'Eu', type: 'pronome' }, { id: 'w2', text: 'preciso', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Cliente', avatar: '📦', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' ' }, { slotId: 's2', correctId: 'w2' }, { text: ' trocar este sapato por um número maior.' }] },
+                    { speaker: 'Atendente', avatar: '🧑‍💼', parts: [{ text: 'Tem a nota fiscal da compra?' }] }
+                ]
+            },
+            {
+                id: 50, catId: 'cat6', title: 'Pagamento do Estacionamento', hint: 'Validar ticket de veículo.',
+                words: [{ id: 'w1', text: 'Onde', type: 'pronome' }, { id: 'w2', text: 'posso', type: 'verbo' }],
+                lines: [
+                    { speaker: 'Motorista', avatar: '🚗', parts: [{ text: ' ' }, { slotId: 's1', correctId: 'w1' }, { text: ' eu ' }, { slotId: 's2', correctId: 'w2' }, { text: ' pagar o ticket do estacionamento?' }] },
+                    { speaker: 'Guarda', avatar: '👮‍♂️', parts: [{ text: 'No guichê ao lado das escadas rolantes.' }] }
+                ]
+            }
+        ];
+    </script>
+
+    <script>
+        // Estado Global do Aplicativo
+        let currentCategoryIndex = 0;
+        let currentDialogueIndex = 0;
+        let selectedWordElement = null; // Suporte para seleção por toque em dispositivos móveis
+        let userAnswers = {}; // Guarda estado { slotId: wordId }
+
+        // Elementos DOM principais
+        const categoryTabsContainer = document.getElementById('category-tabs');
+        const catEmoji = document.getElementById('cat-emoji');
+        const catTitle = document.getElementById('cat-title');
+        const dialogueCounter = document.getElementById('dialogue-counter');
+        const dialogueSelect = document.getElementById('dialogue-select');
+        const dialogueContainer = document.getElementById('dialogue-container');
+        const wordsBank = document.getElementById('words-bank');
+        
+        const feedbackBox = document.getElementById('feedback-box');
+        const feedbackText = document.getElementById('feedback-text');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const hintBox = document.getElementById('hint-box');
+        const hintText = document.getElementById('hint-text');
+
+        const checkBtn = document.getElementById('check-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const solutionBtn = document.getElementById('solution-btn');
+        const advanceBtn = document.getElementById('advance-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextDialogueBtn = document.getElementById('next-dialogue-btn');
+
+        // Inicializador
+        function initApp() {
+            renderCategoryTabs();
+            loadCategory(0);
+
+            // Event Listeners Globais
+            checkBtn.addEventListener('click', validateAnswers);
+            hintBtn.addEventListener('click', toggleHint);
+            solutionBtn.addEventListener('click', showSolution);
+            advanceBtn.addEventListener('click', goToNextDialogue);
+            prevBtn.addEventListener('click', goToPrevDialogue);
+            nextDialogueBtn.addEventListener('click', goToNextDialogue);
+
+            dialogueSelect.addEventListener('change', (e) => {
+                const diagIndex = parseInt(e.target.value, 10);
+                loadDialogue(diagIndex);
+            });
+        }
+
+        function renderCategoryTabs() {
+            categoryTabsContainer.innerHTML = '';
+            categories.forEach((cat, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition border-2 text-xs md:text-sm whitespace-nowrap ${
+                    idx === currentCategoryIndex 
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`;
+                btn.innerHTML = `<span>${cat.emoji}</span> <span>${cat.title}</span>`;
+                btn.addEventListener('click', () => loadCategory(idx));
+                categoryTabsContainer.appendChild(btn);
+            });
+        }
+
+        function loadCategory(catIdx) {
+            currentCategoryIndex = catIdx;
+            renderCategoryTabs();
+
+            // Filtrar diálogos pertencentes a esta categoria
+            const activeCat = categories[catIdx];
+            const catDialogues = dialoguesData.filter(d => d.catId === activeCat.id);
+
+            // Atualiza Seletor de Diálogos
+            dialogueSelect.innerHTML = '';
+            catDialogues.forEach((diag, idx) => {
+                const globalIndex = dialoguesData.findIndex(d => d.id === diag.id);
+                const opt = document.createElement('option');
+                opt.value = globalIndex;
+                opt.textContent = `${diag.id}. ${diag.title}`;
+                dialogueSelect.appendChild(opt);
+            });
+
+            // Carrega o primeiro diálogo da categoria selecionada
+            const firstGlobalIndex = dialoguesData.findIndex(d => d.catId === activeCat.id);
+            loadDialogue(firstGlobalIndex);
+        }
+
+        function loadDialogue(globalIndex) {
+            currentDialogueIndex = globalIndex;
+            userAnswers = {};
+            selectedWordElement = null;
+
+            const diag = dialoguesData[globalIndex];
+            const currentCat = categories.find(c => c.id === diag.catId);
+
+            // Atualizar cabeçalhos e navegação
+            catEmoji.textContent = currentCat.emoji;
+            catTitle.textContent = currentCat.title;
+            
+            // Atualizar contador da categoria
+            const catDialogues = dialoguesData.filter(d => d.catId === diag.catId);
+            const relativeIdx = catDialogues.findIndex(d => d.id === diag.id) + 1;
+            dialogueCounter.textContent = `Diálogo ${relativeIdx} de ${catDialogues.length} (Total: ${diag.id}/50)`;
+
+            dialogueSelect.value = globalIndex;
+
+            // Esconder feedback e dicas
+            feedbackBox.classList.add('hidden');
+            advanceBtn.classList.add('hidden');
+            hintBox.classList.add('hidden');
+            hintText.textContent = diag.hint;
+
+            renderDialogueContent(diag);
+            renderWordsBank(diag);
+            
+            lucide.createIcons();
+        }
+
+        function renderDialogueContent(diag) {
+            dialogueContainer.innerHTML = '';
+
+            diag.lines.forEach(line => {
+                const bubble = document.createElement('div');
+                bubble.className = "flex items-start gap-3 p-3.5 md:p-4 rounded-2xl bg-slate-50 border-2 border-slate-200";
+
+                const avatar = document.createElement('div');
+                avatar.className = "text-2xl md:text-3xl p-2 bg-white rounded-xl shadow-sm border border-slate-100 flex-shrink-0";
+                avatar.textContent = line.avatar;
+
+                const content = document.createElement('div');
+                content.className = "flex-grow text-slate-800 text-sm md:text-base font-medium leading-relaxed";
+
+                const speakerName = document.createElement('span');
+                speakerName.className = "block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-0.5";
+                speakerName.textContent = line.speaker;
+
+                const sentence = document.createElement('p');
+                sentence.className = "flex flex-wrap items-center gap-y-1.5";
+
+                line.parts.forEach(part => {
+                    if (part.text) {
+                        const span = document.createElement('span');
+                        span.textContent = part.text;
+                        sentence.appendChild(span);
+                    } else if (part.slotId) {
+                        const zone = document.createElement('div');
+                        zone.className = 'drop-zone';
+                        zone.dataset.slotId = part.slotId;
+                        zone.dataset.correctId = part.correctId;
+                        
+                        setupDropZoneEvents(zone);
+                        sentence.appendChild(zone);
+                    }
+                });
+
+                content.appendChild(speakerName);
+                content.appendChild(sentence);
+                bubble.appendChild(avatar);
+                bubble.appendChild(content);
+                dialogueContainer.appendChild(bubble);
+            });
+        }
+
+        function renderWordsBank(diag) {
+            wordsBank.innerHTML = '';
+            
+            // Embaralhar palavras para o desafio
+            const shuffled = [...diag.words].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach(word => {
+                const card = document.createElement('div');
+                const badgeClass = word.type === 'pronome' ? 'badge-pronome' : 'badge-verbo';
+                
+                card.className = `draggable-item px-3.5 py-2 rounded-xl font-bold text-sm md:text-base shadow-sm ${badgeClass} flex items-center justify-center cursor-pointer select-none`;
+                card.textContent = word.text;
+                card.draggable = true;
+                card.dataset.wordId = word.id;
+                card.dataset.wordType = word.type;
+
+                setupDraggableEvents(card);
+                wordsBank.appendChild(card);
+            });
+        }
+
+        function setupDraggableEvents(el) {
+            el.addEventListener('dragstart', (e) => {
+                el.classList.add('opacity-50');
+                e.dataTransfer.setData('text/plain', el.dataset.wordId);
+            });
+
+            el.addEventListener('dragend', () => {
+                el.classList.remove('opacity-50');
+            });
+
+            // Seleção por toque/clique (Smartphones & Tablets)
+            el.addEventListener('click', () => {
+                if (selectedWordElement === el) {
+                    selectedWordElement.classList.remove('ring-4', 'ring-blue-500');
+                    selectedWordElement = null;
+                } else {
+                    if (selectedWordElement) {
+                        selectedWordElement.classList.remove('ring-4', 'ring-blue-500');
+                    }
+                    selectedWordElement = el;
+                    selectedWordElement.classList.add('ring-4', 'ring-blue-500');
+                }
+            });
+        }
+
+        function setupDropZoneEvents(zone) {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                const wordId = e.dataTransfer.getData('text/plain');
+                const wordEl = document.querySelector(`[data-word-id="${wordId}"]`);
+                if (wordEl) {
+                    placeWordInSlot(wordEl, zone);
+                }
+            });
+
+            zone.addEventListener('click', () => {
+                if (selectedWordElement) {
+                    placeWordInSlot(selectedWordElement, zone);
+                    selectedWordElement.classList.remove('ring-4', 'ring-blue-500');
+                    selectedWordElement = null;
+                } else if (zone.firstChild) {
+                    returnWordToBank(zone);
+                }
+            });
+        }
+
+        function placeWordInSlot(wordEl, zone) {
+            if (zone.firstChild) {
+                returnWordToBank(zone);
+            }
+
+            zone.appendChild(wordEl);
+            zone.classList.add('filled');
+            userAnswers[zone.dataset.slotId] = wordEl.dataset.wordId;
+            wordEl.classList.remove('ring-4', 'ring-blue-500');
+        }
+
+        function returnWordToBank(zone) {
+            const wordEl = zone.firstChild;
+            if (wordEl) {
+                wordsBank.appendChild(wordEl);
+                zone.classList.remove('filled', 'correct', 'incorrect');
+                delete userAnswers[zone.dataset.slotId];
+            }
+        }
+
+        function validateAnswers() {
+            const zones = dialogueContainer.querySelectorAll('.drop-zone');
+            let allFilled = true;
+            let correctCount = 0;
+
+            zones.forEach(zone => {
+                const slotId = zone.dataset.slotId;
+                const correctId = zone.dataset.correctId;
+                const userWordId = userAnswers[slotId];
+
+                zone.classList.remove('correct', 'incorrect');
+
+                if (!userWordId) {
+                    allFilled = false;
+                } else if (userWordId === correctId) {
+                    zone.classList.add('correct');
+                    correctCount++;
+                } else {
+                    zone.classList.add('incorrect');
+                }
+            });
+
+            feedbackBox.classList.remove('hidden', 'bg-emerald-100', 'bg-amber-100', 'bg-rose-100', 'text-emerald-800', 'text-amber-800', 'text-rose-800');
+
+            if (!allFilled) {
+                feedbackBox.classList.add('bg-amber-100', 'text-amber-800');
+                feedbackIcon.setAttribute('data-lucide', 'alert-circle');
+                feedbackText.textContent = 'Preencha todas as lacunas antes de verificar.';
+                advanceBtn.classList.add('hidden');
+            } else if (correctCount === zones.length) {
+                feedbackBox.classList.add('bg-emerald-100', 'text-emerald-800');
+                feedbackIcon.setAttribute('data-lucide', 'check-circle-2');
+                feedbackText.textContent = 'Parabéns! Diálogo correto!';
+                advanceBtn.classList.remove('hidden');
+            } else {
+                feedbackBox.classList.add('bg-rose-100', 'text-rose-800');
+                feedbackIcon.setAttribute('data-lucide', 'x-circle');
+                feedbackText.textContent = 'Existem erros no diálogo. Ajuste as palavras!';
+                advanceBtn.classList.add('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        function toggleHint() {
+            hintBox.classList.toggle('hidden');
+            lucide.createIcons();
+        }
+
+        function showSolution() {
+            const diag = dialoguesData[currentDialogueIndex];
+            const zones = dialogueContainer.querySelectorAll('.drop-zone');
+
+            zones.forEach(zone => {
+                const correctId = zone.dataset.correctId;
+                const wordObj = diag.words.find(w => w.id === correctId);
+                const wordEl = document.querySelector(`[data-word-id="${correctId}"]`);
+
+                if (wordEl) {
+                    placeWordInSlot(wordEl, zone);
+                    zone.classList.remove('incorrect');
+                    zone.classList.add('correct');
+                }
+            });
+
+            validateAnswers();
+        }
+
+        function goToNextDialogue() {
+            if (currentDialogueIndex < dialoguesData.length - 1) {
+                const nextDiag = dialoguesData[currentDialogueIndex + 1];
+                const catIdx = categories.findIndex(c => c.id === nextDiag.catId);
+                if (catIdx !== currentCategoryIndex) {
+                    currentCategoryIndex = catIdx;
+                    renderCategoryTabs();
+                }
+                loadDialogue(currentDialogueIndex + 1);
+            } else {
+                loadDialogue(0); // Volta ao início
+            }
+        }
+
+        function goToPrevDialogue() {
+            if (currentDialogueIndex > 0) {
+                const prevDiag = dialoguesData[currentDialogueIndex - 1];
+                const catIdx = categories.findIndex(c => c.id === prevDiag.catId);
+                if (catIdx !== currentCategoryIndex) {
+                    currentCategoryIndex = catIdx;
+                    renderCategoryTabs();
+                }
+                loadDialogue(currentDialogueIndex - 1);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
